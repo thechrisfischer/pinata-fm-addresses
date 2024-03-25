@@ -35,16 +35,22 @@ def scrape(playwright: Playwright, zip_code) -> None:
     page.wait_for_url('**/zipcode')
     zip_table = page.locator("#block-rentallookupapiresponseblock div").nth(1)
     addresses_table = zip_table.locator("tbody").locator("tr").all()
+    count = 0
     for i in addresses_table:
+        property_name = i.locator("td").nth(0).inner_text()
         addy = i.locator("td").nth(1).inner_text()
-        csv_data = "{}|{}".format(zip_code, addy) 
+        csv_data = "{}|{}|{}".format(property_name, zip_code, addy)
+        count = count + 1 
         
-        with open(ADDRESS_FILE, 'a') as file:
+        if count > 100:
+            with open(ADDRESS_FILE, 'a') as file:
                 file.write(csv_data + '\n')
     
         # Append data from the CSV
-        values = csv_data.split('|')
-        worksheet.append_row(values)
+            values = csv_data.split('|')
+            worksheet.append_row(values)
+
+            count = 0
     
     # ---------------------
     context.close()
@@ -58,4 +64,7 @@ with open(ZIPCODES, 'r') as csvfile:
         for row in csv_reader:
             with sync_playwright() as playwright:
                 zip_code = row[0]
-                scrape(playwright, zip_code)
+                try:
+                    scrape(playwright, zip_code)
+                except:
+                    continue
