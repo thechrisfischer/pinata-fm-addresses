@@ -7,7 +7,7 @@ from playwright.sync_api import Playwright, sync_playwright, expect
 ZIPCODES = 'all_us_zipcodes.csv'
 ADDRESS_FILE = 'addresses.csv'
 POSITION = 'position.txt'
-BATCH_SIZE = 20
+BATCH_SIZE = 10
 HEADLESS = True
 
 logging.basicConfig(level=logging.INFO)
@@ -23,35 +23,33 @@ sheet = client.open_by_key('1OXOYS_IMm3PxNj_oryOn2F73_rxoeei7iGoFpNgfHv8')
 # Select the worksheet by its name
 worksheet = sheet.worksheet("Sheet1")
 
-def get_zipcode_batch(start_position):
+def get_zipcode_batch():
+
+    start_position = get_start_position()
     batch_size = BATCH_SIZE
     property_data = []
 
 
     with open (ZIPCODES, 'r') as csvfile:
         csv_reader = csv.reader(csvfile)
-        
-        #Skip the headers
-        next(csv_reader)
-        
         skip_row = True
         
-        print("processing batch # {}".format(batch_size))
+        print("processing batch of size {}".format(batch_size))
         while skip_row == True:
             row = next(csv_reader)
             position = row[0]
             zip_code = row[5] 
-            if start_position is not None and start_position != position:
-                print("skipping over already processed code {}".format(zip_code))
+            if start_position != position:
+                print("skipping looking for start position {} currently at postion {}".format(start_position, position ))
                 continue
             else:
-                print("Found the starting position of zipcode -- {}".format(zip_code))
+                print("Found the starting position  -- {} at position {}".format(zip_code, position))
                 skip_row = False
         
         while batch_size > 0:
             row = next(csv_reader)
-            zip_code = row[5]
             position = row[0]
+            zip_code = row[5]
             save_position(position)
             with sync_playwright() as playwright:
                 try:
@@ -59,7 +57,7 @@ def get_zipcode_batch(start_position):
                     if data is not None:
                         for p in data:
                             property_data.append(p)
-                            print("Batch number {} --- {}".format(batch_size, p))
+                            print("Batch number {} --- position {} -- property {}".format(batch_size, position, p))
                     batch_size = batch_size - 1
                 except:
                     print("Batch number {} -- no data".format(batch_size))
@@ -81,7 +79,7 @@ def get_start_position():
             saved_position = line
             logging.info("Previous save point found starting from zipcode {}".format(saved_position))
         else:
-            saved_position = None
+            saved_position = "1"
             logging.info("No saved position found starting from the top :)")
     file.close()
     return saved_position
@@ -91,7 +89,7 @@ def save_position(position):
     with open (POSITION, 'w') as file:
         file.write(position)
         file.close()
-    return position
+    return
 
 
 def write_csv_data(csvdata):
@@ -135,8 +133,8 @@ def scrape(playwright: Playwright, zip_code):
 if __name__ == "__main__":
 
     start_position = get_start_position()
-    while start_position < "41705":
-        batch = get_zipcode_batch(start_position)
+    while start_position is not None:
+        batch = get_zipcode_batch()
         if batch is not None:
             write_csv_data(batch)
             worksheet.append_rows(batch)
