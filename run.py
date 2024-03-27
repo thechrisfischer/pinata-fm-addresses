@@ -7,7 +7,7 @@ from playwright.sync_api import Playwright, sync_playwright, expect
 ZIPCODES = 'all_us_zipcodes.csv'
 ADDRESS_FILE = 'addresses.csv'
 POSITION = 'position.txt'
-BATCH_SIZE = 10
+BATCH_SIZE = 25
 HEADLESS = True
 
 logging.basicConfig(level=logging.INFO)
@@ -34,16 +34,15 @@ def get_zipcode_batch():
         csv_reader = csv.reader(csvfile)
         skip_row = True
         
-        print("processing batch of size {}".format(batch_size))
+        logging.info("processing batch of size {}".format(batch_size))
         while skip_row == True:
             row = next(csv_reader)
             position = row[0]
             zip_code = row[5] 
             if start_position != position:
-                print("skipping looking for start position {} currently at postion {}".format(start_position, position ))
                 continue
             else:
-                print("Found the starting position  -- {} at position {}".format(zip_code, position))
+                logging.info("Found the starting position  -- {} at position {}".format(zip_code, position))
                 skip_row = False
         
         while batch_size > 0:
@@ -57,10 +56,10 @@ def get_zipcode_batch():
                     if data is not None:
                         for p in data:
                             property_data.append(p)
-                            print("Batch number {} --- position {} -- property {}".format(batch_size, position, p))
+                            logging.info("Batch number {} --- position {} -- property {}".format(batch_size, position, p))
                     batch_size = batch_size - 1
                 except:
-                    print("Batch number {} -- no data".format(batch_size))
+                    logging.info("Batch number {} -- no data".format(batch_size))
                     batch_size = batch_size - 1
                     continue 
         else:
@@ -112,6 +111,7 @@ def scrape(playwright: Playwright, zip_code):
     zip_table = page.locator("#block-rentallookupapiresponseblock div").nth(1)
     addresses_table = zip_table.locator("tbody").locator("tr").all()
     csv_data = []
+    logging.info("Scraping - {}".format(zip_code))
     for i in addresses_table:
         property_name = i.locator("td").nth(0).inner_text()
         address = i.locator("td").nth(1).inner_text()
@@ -120,7 +120,6 @@ def scrape(playwright: Playwright, zip_code):
         if property_data:
             csv_data.append(property_data)
       
-        logging.info("Scraping - {}".format(zip_code))
 
     context.close()
     browser.close()
