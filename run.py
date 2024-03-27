@@ -39,8 +39,9 @@ def get_zipcode_batch(start_position):
         print("processing batch # {}".format(batch_size))
         while skip_row == True:
             row = next(csv_reader)
+            position = row[0]
             zip_code = row[5] 
-            if start_position is not None and start_position != zip_code:
+            if start_position is not None and start_position != position:
                 print("skipping over already processed code {}".format(zip_code))
                 continue
             else:
@@ -50,7 +51,8 @@ def get_zipcode_batch(start_position):
         while batch_size > 0:
             row = next(csv_reader)
             zip_code = row[5]
-            save_position(zip_code)
+            position = row[0]
+            save_position(position)
             with sync_playwright() as playwright:
                 try:
                     data = scrape(playwright, zip_code)
