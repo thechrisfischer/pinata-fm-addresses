@@ -31,34 +31,42 @@ def get_zipcode_batch(start_position):
     with open (ZIPCODES, 'r') as csvfile:
         csv_reader = csv.reader(csvfile)
         
-        #Ship the headers
+        #Skip the headers
         next(csv_reader)
         
+        skip_row = True
         
         print("processing batch # {}".format(batch_size))
-        for row in csv_reader:
-            zip_code = row[5]
+        while skip_row == True:
+            row = next(csv_reader)
+            zip_code = row[5] 
             if start_position is not None and start_position != zip_code:
                 print("skipping over already processed code {}".format(zip_code))
                 continue
-            if batch_size > 0:
-                with sync_playwright() as playwright:
-                    try:
-                        data = scrape(playwright, zip_code)
-                        if data is not None:
-                            for p in data:
-                                property_data.append(p)
-                        start_position = save_position(zip_code)
-                        print("Batch number {} --- {}".format(batch_size, p))
-                        batch_size = batch_size - 1
-                    except:
-                        print("Batch number {} -- no data".format(batch_size))
-                        batch_size = batch_size - 1
-                        start_position = save_position(zip_code)
-                        continue 
             else:
-                logging.info("Batch complete")
-                break
+                print("Found the starting position of zipcode -- {}".format(zip_code))
+                skip_row = False
+        
+        while batch_size > 0:
+            row = next(csv_reader)
+            zip_code = row[5]
+            with sync_playwright() as playwright:
+                try:
+                    data = scrape(playwright, zip_code)
+                    if data is not None:
+                        for p in data:
+                            property_data.append(p)
+                    start_position = save_position(zip_code)
+                    print("Batch number {} --- {}".format(batch_size, p))
+                    batch_size = batch_size - 1
+                except:
+                    print("Batch number {} -- no data".format(batch_size))
+                    batch_size = batch_size - 1
+                    start_position = save_position(zip_code)
+                    continue 
+        else:
+            logging.info("Batch complete")
+    
     if property_data:
         return property_data
     else:
