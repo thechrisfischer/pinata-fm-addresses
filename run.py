@@ -134,7 +134,8 @@ def scrape(playwright: Playwright, zip_code):
 if __name__ == "__main__":
 
     start_position = get_start_position()
-    batch = get_zipcode_batch(start_position)
-    if batch is not None:
-        write_csv_data(batch)
-        worksheet.append_rows(batch)
+    while start_position < "41705":
+        batch = get_zipcode_batch(start_position)
+        if batch is not None:
+            write_csv_data(batch)
+            worksheet.append_rows(batch)
