@@ -33,17 +33,17 @@ def get_zipcode_batch():
     with open (ZIPCODES, 'r') as csvfile:
         csv_reader = csv.reader(csvfile)
         skip_row = True
-        
         logging.info("processing batch of size {}".format(batch_size))
         while skip_row == True:
             row = next(csv_reader)
-            position = row[0]
-            zip_code = row[5] 
-            if start_position != position:
-                continue
-            else:
+            position = str(row[0])
+            zip_code = row[5]
+            
+            if position == start_position:
                 logging.info("Found the starting position  -- {} at position {}".format(zip_code, position))
                 skip_row = False
+            else:
+                continue
         
         while batch_size > 0:
             row = next(csv_reader)
@@ -71,11 +71,11 @@ def get_zipcode_batch():
         return None
 
 
-def get_start_position():
+def get_start_position() -> str:
     with open (POSITION, 'r') as file:
         line = file.readline()
         if line:
-            saved_position = line
+            saved_position = str(line).strip()
             logging.info("Previous save point found starting from zipcode {}".format(saved_position))
         else:
             saved_position = "1"
