@@ -7,7 +7,7 @@ from playwright.sync_api import Playwright, sync_playwright, expect
 ZIPCODES = 'all_us_zipcodes.csv'
 ADDRESS_FILE = 'addresses.csv'
 POSITION = 'position.txt'
-BATCH_SIZE = 5
+BATCH_SIZE = 20
 HEADLESS = True
 
 logging.basicConfig(level=logging.INFO)
@@ -50,19 +50,18 @@ def get_zipcode_batch(start_position):
         while batch_size > 0:
             row = next(csv_reader)
             zip_code = row[5]
+            save_position(zip_code)
             with sync_playwright() as playwright:
                 try:
                     data = scrape(playwright, zip_code)
                     if data is not None:
                         for p in data:
                             property_data.append(p)
-                    start_position = save_position(zip_code)
-                    print("Batch number {} --- {}".format(batch_size, p))
+                            print("Batch number {} --- {}".format(batch_size, p))
                     batch_size = batch_size - 1
                 except:
                     print("Batch number {} -- no data".format(batch_size))
                     batch_size = batch_size - 1
-                    start_position = save_position(zip_code)
                     continue 
         else:
             logging.info("Batch complete")
