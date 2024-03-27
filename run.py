@@ -5,9 +5,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 from playwright.sync_api import Playwright, sync_playwright, expect
 
 ZIPCODES = 'all_us_zipcodes.csv'
-ADDRESS_FILE = 'addresses.txt'
+ADDRESS_FILE = 'addresses.csv'
 POSITION = 'position.txt'
-BATCH_SIZE = 10
+BATCH_SIZE = 5
 HEADLESS = True
 
 logging.basicConfig(level=logging.INFO)
@@ -24,47 +24,65 @@ sheet = client.open_by_key('1OXOYS_IMm3PxNj_oryOn2F73_rxoeei7iGoFpNgfHv8')
 worksheet = sheet.worksheet("Sheet1")
 
 def get_zipcode_batch(start_position):
-    last_position = int(start_position)
     batch_size = BATCH_SIZE
     property_data = []
+
 
     with open (ZIPCODES, 'r') as csvfile:
         csv_reader = csv.reader(csvfile)
         
-        #Skip the header
+        #Ship the headers
         next(csv_reader)
         
-        #hacky seek to last position 
-        while last_position > 0:
-            next(csv_reader)
-            last_position = last_position - 1
         
         print("processing batch # {}".format(batch_size))
         for row in csv_reader:
             zip_code = row[5]
+            if start_position is not None and start_position != zip_code:
+                print("skipping over already processed code {}".format(zip_code))
+                continue
             if batch_size > 0:
                 with sync_playwright() as playwright:
                     try:
                         data = scrape(playwright, zip_code)
-                        property_data.append(data)
-                        print("Batch number {} --- {}".format(batch_size, data))
+                        if data is not None:
+                            for p in data:
+                                property_data.append(p)
+                        start_position = save_position(zip_code)
+                        print("Batch number {} --- {}".format(batch_size, p))
                         batch_size = batch_size - 1
                     except:
                         print("Batch number {} -- no data".format(batch_size))
                         batch_size = batch_size - 1
+                        start_position = save_position(zip_code)
                         continue 
-    return property_data
+            else:
+                logging.info("Batch complete")
+                break
+    if property_data:
+        return property_data
+    else:
+        return None
 
 
 def get_start_position():
     with open (POSITION, 'r') as file:
-        saved_position = file.readline()
-        return saved_position
+        line = file.readline()
+        if line:
+            saved_position = line
+            logging.info("Previous save point found starting from zipcode {}".format(saved_position))
+        else:
+            saved_position = None
+            logging.info("No saved position found starting from the top :)")
+    file.close()
+    return saved_position
 
 
 def save_position(position):
     with open (POSITION, 'w') as file:
         file.write(position)
+        file.close()
+    return position
 
 
 def write_csv_data(csvdata):
@@ -91,20 +109,24 @@ def scrape(playwright: Playwright, zip_code):
         property_name = i.locator("td").nth(0).inner_text()
         address = i.locator("td").nth(1).inner_text()
         property_data = [zip_code, property_name, address]
-        csv_data.append(property_data)
+        
+        if property_data:
+            csv_data.append(property_data)
+      
         logging.info("Scraping - {}".format(zip_code))
 
-        print(csv_data)
-    
     context.close()
     browser.close()
 
-    return csv_data
-
+    if csv_data:
+        return csv_data
+    else:
+        return None
 
 if __name__ == "__main__":
 
     start_position = get_start_position()
     batch = get_zipcode_batch(start_position)
-    print(batch)
-    write_csv_data(batch)
+    if batch is not None:
+        write_csv_data(batch)
+        worksheet.append_rows(batch)
