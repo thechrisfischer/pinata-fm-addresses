@@ -146,7 +146,10 @@ if __name__ == "__main__":
     start_position = get_start_position()
     
     while start_position is not None:
-        batch = get_zipcode_batch()
+        try:
+            batch = get_zipcode_batch()
+        except:
+            continue
         
         if batch is not None:
             write_csv_data(batch)
