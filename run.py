@@ -10,7 +10,7 @@ ADDRESS_FILE = 'addresses.csv'
 POSITION = 'position.txt'
 BATCH_SIZE = 25
 HEADLESS = True
-ENABLE_GSHEETS = False
+ENABLE_GSHEETS = True
 
 logging.basicConfig(level=logging.INFO)
 
